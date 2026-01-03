@@ -195,5 +195,7 @@ function draw() {
     requestAnimationFrame(draw);
 }
 
+updateSize();
+
 initParticles();
 draw();
