@@ -92,8 +92,21 @@ canvas.height = window.innerHeight;
 
 let rotation = { x: 0, y: 0 };
 const particles = [];
-const sphereRadius = 200;
+let sphereRadius = 200;
 const density = 15;
+
+function updateSize() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    // Set radius to 30% of the smaller screen dimension
+    const minDimension = Math.min(canvas.width, canvas.height);
+    sphereRadius = minDimension * 0.35; 
+    
+    // If you moved particle generation to initParticles(), 
+    // you must call it again here so they take the new radius!
+    initParticles();
+}
 
 // 1. Generate particles ONCE
 function initParticles() {
@@ -111,6 +124,8 @@ function initParticles() {
 
 // 2. Handle resizing properly
 window.addEventListener('resize', () => {
+    updateSize();
+
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
 });
@@ -120,6 +135,18 @@ document.addEventListener('mousemove', (e) => {
     rotation.y = (e.clientX / canvas.width - 0.5) * Math.PI * 2;
     rotation.x = (e.clientY / canvas.height - 0.5) * Math.PI * 2;
 });
+
+document.addEventListener('touchmove', (e) => {
+    // 1. Prevent scrolling while interacting with the canvas
+    e.preventDefault();
+
+    // 2. Access the first touch point
+    const touch = e.touches[0];
+    
+    // 3. Update rotation using the touch coordinates
+    rotation.y = (touch.clientX / canvas.width - 0.5) * Math.PI * 2;
+    rotation.x = (touch.clientY / canvas.height - 0.5) * Math.PI * 2;
+}, { passive: false }); // 'passive: false' is required to allow preventDefault()
 
 function draw() {
     // Clear with a slight trail effect
