@@ -1,181 +1,148 @@
-// const canvas = document.getElementById('canvas');
-// const ctx = canvas.getContext('2d');
-
-// const canvasWidth = canvas.width = window.innerWidth;
-// const canvasHeight = canvas.height = window.innerHeight;
-
-// const particles = 500;
-// const radius = 200;
-// let rotation = 0;
-// let angleOffset = 0; // New variable to track the "morphing" angle
-
-// function draw(){
-//     ctx.clearRect(0, 0, canvasWidth, canvasHeight);
-//     ctx.save();
-//     ctx.translate(canvasWidth / 2, canvasHeight / 2);
-
-//     // The core Fibonacci angle is ~2.399 radians (137.5 degrees)
-//     // We'll use angleOffset to deviate from this over time
-//     const baseAngle = (137.5 * Math.PI / 180) + Math.sin(angleOffset) * 0.05;
-
-//     for (let i = 0; i < particles; i++){
-//         const y = 1 - (i / (particles - 1)) * 2;
-//         const yRadius = Math.sqrt(1 - y * y);
-        
-//         // const theta = 137.5 * (Math.PI / 270) * i + rotation;
-
-//         // Use the dynamic baseAngle here
-//         const theta = i * baseAngle + rotation;
-
-//         const x = Math.cos(theta) * yRadius;
-//         const z = Math.sin(theta) * yRadius;
-
-//         const perspective = 500 / (500 + (z * radius));
-//         const renderX = x * radius * perspective;
-//         const renderY = y * radius * perspective;
-
-//         const opacity = (z + 1) / 2;
-//         ctx.fillStyle = `rgba(255, 255, 255, ${opacity})`;
-
-//         ctx.beginPath();
-//         ctx.arc(renderX, renderY, 2 * perspective, 0, Math.PI * 2);
-//         ctx.fill();
-//     }
-    
-//     rotation += 0.01;
-//     angleOffset += 0.002;  // Changes the internal pattern (morphing)
-
-//     ctx.restore();
-//     requestAnimationFrame(draw);
-// }
-
-// draw()
-
-
-
-// const canvas = document.getElementById('canvas');
-// const ctx = canvas.getContext('2d');
-
-// const canvasWidth = canvas.width = window.innerWidth;
-// const canvasHeight = canvas.height = window.innerHeight;
-
-// const particles = 500;
-// const radius = 200;
-// let rotation = 0;
-// let angleOffset = 0; // New variable to track the "morphing" angle
-// const time = performance.now();
-
-// function draw(){
-//     ctx.clearRect(0, 0, canvasWidth, canvasHeight);
-//     ctx.save();
-//     ctx.translate(canvasWidth / 2, canvasHeight / 2);
-
-//     // The core Fibonacci angle is ~2.399 radians (137.5 degrees)
-//     // We'll use angleOffset to deviate from this over time
-//     const baseAngle = (137.5 * Math.PI / 180) + Math.sin(angleOffset) * 0.05;
-
-//     for (let i = 0; i < particles; i++){
-//         const y = 1 - (i / (particles - 1)) * 2;
-//         const yRadius = Math.sqrt(1 - y * y);
-        
-//         // const theta = 137.5 * (Math.PI / 270) * i + rotation;
-
-//         // Use the dynamic baseAngle here
-//         const theta = i * baseAngle + rotation;
-
-//         const x = Math.cos(theta) * yRadius;
-//         const z = Math.sin(theta) * yRadius;
-
-//         const perspective = 500 / (500 + (z * radius));
-//         const renderX = x * radius * perspective;
-//         const renderY = y * radius * perspective;
-
-//         const opacity = (z + 1) / 2;
-//         ctx.fillStyle = `rgba(255, 255, 255, ${opacity})`;
-
-//         ctx.beginPath();
-//         ctx.arc(renderX, renderY, 2 * perspective, 0, Math.PI * 2);
-//         ctx.fill();
-//     }
-    
-//     // rotation += 0.01;
-//     rotation += Math.atan(time) * -0.02;
-//     angleOffset += 0.002;  // Changes the internal pattern (morphing)
-
-//     ctx.restore();
-//     requestAnimationFrame(draw);
-// }
-
-// draw()
-
-
-
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
 
-const canvasWidth = canvas.width = window.innerWidth;
-const canvasHeight = canvas.height = window.innerHeight;
+// ===============================
+// CANVAS SETUP (hi-DPI safe)
+// ===============================
+let WIDTH, HEIGHT, dpr;
+let radius, majorRadius, minorRadius;
 
-const particles = 500;
-const radius = 200;
+
+dpr = window.devicePixelRatio || 1;
+
+canvas.width = WIDTH * dpr;
+canvas.height = HEIGHT * dpr;
+canvas.style.width = WIDTH + 'px';
+canvas.style.height = HEIGHT + 'px';
+
+ctx.scale(dpr, dpr);
+
+// PARAMETERS
+const particles = 700;
+
+const minDim = Math.min(WIDTH, HEIGHT);
+
+radius = minDim * 0.28;
+majorRadius = minDim * 0.32;
+minorRadius = minDim * 0.12;
+
+// const radius = 200;
+// const majorRadius = 220;
+// const minorRadius = 80;
+
+const baseAngle = 137.5 * Math.PI / 180;
+
 let rotation = 0;
-let angleOffset = 0; // New variable to track the "morphing" angle
-// const time = performance.now();
+let frame = 0;
+const FPS = 60;
 
-function draw(){
-    ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+function resize() {
+    dpr = window.devicePixelRatio || 1;
+    WIDTH = window.innerWidth;
+    HEIGHT = window.innerHeight;
+
+    canvas.width = WIDTH * dpr;
+    canvas.height = HEIGHT * dpr;
+    canvas.style.width = WIDTH + 'px';
+    canvas.style.height = HEIGHT + 'px';
+
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.scale(dpr, dpr);
+
+    const minDim = Math.min(WIDTH, HEIGHT);
+    radius = minDim * 0.28;
+    majorRadius = minDim * 0.32;
+    minorRadius = minDim * 0.12;
+}
+
+resize();
+window.addEventListener('resize', resize);
+
+
+function smoothstep(edge0, edge1, x) {
+  x = Math.max(0, Math.min(1, (x - edge0) / (edge1 - edge0)));
+  return x * x * (3 - 2 * x);
+}
+
+// ANIMATION LOOP
+function draw() {
+    ctx.clearRect(0, 0, WIDTH, HEIGHT);
     ctx.save();
-    ctx.translate(canvasWidth / 2, canvasHeight / 2);
+    ctx.translate(WIDTH / 2, HEIGHT / 2);
 
-    // The core Fibonacci angle is ~2.399 radians (137.5 degrees)
-    // We'll use angleOffset to deviate from this over time
-    const baseAngle = (137.5 * Math.PI / 180) + Math.sin(angleOffset) * 0.05;
+    const time = frame / FPS;
 
+    // ---- morph loop ----
+    // Sphere → Torus → Sphere
+    const LOOP = 8; // seconds
+    const t = (time % LOOP) / LOOP;
 
-    const time = performance.now() * 0.001;
+    let morph;
 
-    const majorRadius = 220; // distance from center to ring
-    const minorRadius = 80;  // thickness of the tube
+    if (t < 0.25) {
+        morph = 0;
+    } else if (t < 0.5) {
+        morph = smoothstep(0.25, 0.5, t);
+    } else if (t < 0.75) {
+        morph = 1;
+    } else {
+        morph = 1 - smoothstep(0.75, 1.0, t);
+    }
+
 
     for (let i = 0; i < particles; i++) {
 
-    // Distribute points evenly
-    const u = i * baseAngle;
-    const v = i * 0.15 + Math.sin(angleOffset) * 0.3;
+    // SPHERE POSITION
+    const y = 1 - (i / (particles - 1)) * 2;
+    const sphereRadius = Math.sqrt(1 - y * y);
 
-    // Torus parametric equations
-    const x =
-        (majorRadius + minorRadius * Math.cos(v)) * Math.cos(u);
+    const theta = i * baseAngle + rotation;
 
-    const y =
-        minorRadius * Math.sin(v);
+    const sx = Math.cos(theta) * sphereRadius * radius;
+    const sy = y * radius;
+    const sz = Math.sin(theta) * sphereRadius * radius;
 
-    const z =
-        (majorRadius + minorRadius * Math.cos(v)) * Math.sin(u);
+    
+    // TORUS POSITION
+    // Torus motion parameters
+    const torusFlow = time * 1.2;
+    const torusTwist = Math.sin(time * 0.8) * 0.4;
 
-    // Perspective projection
+    const u = i * baseAngle + torusFlow;
+    const v = i * 0.15 + torusTwist;
+
+    const tx = (majorRadius + minorRadius * Math.cos(v)) * Math.cos(u);
+    const ty = minorRadius * Math.sin(v) * 2;
+    const tz = (majorRadius + minorRadius * Math.cos(v)) * Math.sin(u);
+
+
+    // SHAPE MORPH 
+    const x = sx * (1 - morph) + tx * morph;
+    const yPos = sy * (1 - morph) + ty * morph;
+    const z = sz * (1 - morph) + tz * morph;
+
+
+    // PERSPECTIVE PROJECTION
     const perspective = 600 / (600 + z);
-
     const renderX = x * perspective;
-    const renderY = y * perspective;
+    const renderY = yPos * perspective;
 
-    const opacity = Math.max(0.2, perspective - 0.2);
+
+    // VISUAL STYLE
+    const size = 2.2 * perspective;
+    const opacity = Math.min(1, perspective);
 
     ctx.fillStyle = `rgba(255,255,255,${opacity})`;
-
     ctx.beginPath();
-    ctx.arc(renderX, renderY, 2 * perspective, 0, Math.PI * 2);
+    ctx.arc(renderX, renderY, size, 0, Math.PI * 2);
     ctx.fill();
     }
 
-    
-    // rotation += 0.01;
-    rotation += Math.atan(time) * -0.02;
-    angleOffset += 0.002;  // Changes the internal pattern (morphing)
+    rotation += 0.01;
+    frame++;
 
     ctx.restore();
     requestAnimationFrame(draw);
 }
 
-draw()
-
+draw();
